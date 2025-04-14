@@ -89,15 +89,17 @@ class ImageSlicer(QMainWindow):
         volume: np.ndarray,
         app: QApplication,
         click_generator: Generator[str, Coords, None] | None,
+        gamma: float,
     ):
         """
         a click_generator yeilds titles when a click occurs
         gamma is the gamma correction
-        scale is the fraction scale to use
         """
         super().__init__()
         # set volume dynamic range
-        self.volume = (volume * (254 / np.max(volume))).astype(np.uint8)
+        image = (volume * (254 / np.max(volume))).astype(np.uint8)
+        lut = np.rint(255 * (np.linspace(0, 1, 256) ** gamma)).astype(np.uint8)
+        self.volume = lut[image]
         self.app = app
         self.current_slice = 0
         self.click_generator = click_generator
@@ -523,6 +525,7 @@ def main(
     other_image_specs: dict[str, int] | None = None,
     take_coords=True,
     proc_image=True,
+    gamma=0.2,
 ):
     """
     opens the file in a viewer, prompts landmarks then writes those landmarks
@@ -532,7 +535,11 @@ def main(
         other_image_specs = {}
     other_image_specs.update(S=scene)
     # perhaps update file_name
-    if socket.gethostname() == "UO-2008493" and len(in_path.parts) > 2 and in_path.parts[2] == "DoeLab65TB":
+    if (
+        socket.gethostname() == "UO-2008493"
+        and len(in_path.parts) > 2
+        and in_path.parts[2] == "DoeLab65TB"
+    ):
         in_path = Path("/mnt/z") / in_path.relative_to(Path(*in_path.parts[:3]))
     if in_path.suffix == ".czi":
         lcc = LazyCziChannels(in_path, other_image_specs)
@@ -567,6 +574,7 @@ def main(
             np.array([0.19] * 3),
             # np.array([spacings_dict["Z"], spacings_dict["Y"], spacings_dict["X"]]),
         ),
+        gamma=gamma,
     )
     slicer.resize(800, 600)
     slicer.setWindowTitle(str(in_path))
@@ -585,6 +593,13 @@ def main(
     help="channel to visualize. Default is 0. Ignored if --dont-take-coords",
 )
 @click.option(
+    "-g",
+    "--gamma",
+    type=float,
+    default=0.2,
+    help="gamma correction for visualization. Default is 0.2 Ignored if --dont-take-coords",
+)
+@click.option(
     "--take-coords/--dont-take-coords",
     type=bool,
     default=True,
@@ -596,7 +611,14 @@ def main(
     default=True,
     help="whether to processes the image, or else just run the GUI saving the coords.",
 )
-def cli(file: str, scene: int, channel: int, take_coords: bool, proc_image: bool):
+def cli(
+    file: str,
+    scene: int,
+    channel: int,
+    take_coords: bool,
+    proc_image: bool,
+    gamma: float,
+):
     """
     Rotate an embryo into the right orientation cropping to the limits of the
     VNC. This takes a .czi or ome.tiff file and reads a particular scene. It
@@ -617,6 +639,7 @@ def cli(file: str, scene: int, channel: int, take_coords: bool, proc_image: bool
         channel=channel,
         take_coords=take_coords,
         proc_image=proc_image,
+        gamma=gamma,
     )
 
 
