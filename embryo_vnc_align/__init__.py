@@ -8,6 +8,7 @@ from typing import Protocol, Generator, TypeAlias
 import logging
 from dataclasses import dataclass
 import xml.etree.ElementTree as ET
+import socket
 
 from aicspylibczi import CziFile
 import nrrd
@@ -213,7 +214,11 @@ class LazyTiffChannels:
         pixel_md = pixels.attrib
         # get xyz scale
         self.scale = np.array(
-            [pixel_md["PhysicalSizeZ"], pixel_md["PhysicalSizeY"], pixel_md["PhysicalSizeX"]]
+            [
+                pixel_md["PhysicalSizeZ"],
+                pixel_md["PhysicalSizeY"],
+                pixel_md["PhysicalSizeX"],
+            ]
         ).astype(float)
         self.channel_range = range(shape[0])
         self._channel_dict: dict[int, np.ndarray | None] = {
@@ -523,10 +528,12 @@ def main(
     opens the file in a viewer, prompts landmarks then writes those landmarks
     to disk as a txt file
     """
-    import pudb; pudb.set_trace()
     if other_image_specs is None:
         other_image_specs = {}
     other_image_specs.update(S=scene)
+    # perhaps update file_name
+    if socket.gethostname() == "UO-2008493" and in_path.parts[2] == "DoeLab65TB":
+        in_path = Path("/mnt/z") / in_path.relative_to(Path(*in_path.parts[:3]))
     if in_path.suffix == ".czi":
         lcc = LazyCziChannels(in_path, other_image_specs)
     elif tuple(in_path.suffixes) in ((".ome", ".tiff"), (".ome", ".tiff)")):
@@ -568,7 +575,7 @@ def main(
 
 
 @click.command(name="embryo-vnc-align")
-@click.argument("file", type=click.Path(exists=True, dir_okay=False))
+@click.argument("file", type=click.Path())
 @click.option("-s", "--scene", type=int, default=0, help="scene to read. Default is 0")
 @click.option(
     "-c",
