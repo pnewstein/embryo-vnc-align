@@ -532,7 +532,7 @@ def main(
         other_image_specs = {}
     other_image_specs.update(S=scene)
     # perhaps update file_name
-    if socket.gethostname() == "UO-2008493" and in_path.parts[2] == "DoeLab65TB":
+    if socket.gethostname() == "UO-2008493" and len(in_path.parts) > 2 and in_path.parts[2] == "DoeLab65TB":
         in_path = Path("/mnt/z") / in_path.relative_to(Path(*in_path.parts[:3]))
     if in_path.suffix == ".czi":
         lcc = LazyCziChannels(in_path, other_image_specs)
