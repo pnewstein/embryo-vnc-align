@@ -428,15 +428,15 @@ def rotate_image(lcc: LazyImageChannels):
         list_str = line.split()
         coords_dict[list_str[-1]] = np.array(list_str[:-1]).astype(float)
     # determine xformed cords by rotating then adding buffers
-    lower_range_divisor = np.array((0.3, 10, 10))
-    upper_range_divisor = 10
+    lower_range_divisor = np.array((0.4, 10, 10))
+    upper_range_divisor = np.array((2, 10, 10))
     top = np.array(coords_dict["anterior"])
     left = np.array(coords_dict["left"])
     right = np.array(coords_dict["right"])
     bottom = np.array(coords_dict["posterior"])
     target_landmarks = lcc.unique_path.with_suffix(".target.landmarks")
     xform = lcc.unique_path.with_suffix(".xform")
-    out_scale = np.array([0.19] * 3)
+    out_scale = np.array([lcc.scale.min()] * 3)
     rot = compute_alignment_rotation(top, bottom, left, right)
     rotated_coords = rot.apply(np.stack((top, left, right, bottom)))
     rc_min = rotated_coords.min(axis=0)
@@ -571,8 +571,7 @@ def main(
         app,
         coords_generator(
             callback,
-            np.array([0.19] * 3),
-            # np.array([spacings_dict["Z"], spacings_dict["Y"], spacings_dict["X"]]),
+            lcc.scale
         ),
         gamma=gamma,
     )
