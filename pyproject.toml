@@ -1,0 +1,19 @@
+[project]
+name = "embryo_vnc_align"
+version = "0.0.1"
+description = "Rotate embryos in 3D"
+requires-python = ">=3.10"
+dependencies = [
+    "click",
+    "pynrrd>=1.1",
+    "numpy",
+    "scipy",
+    #"PyQt5",
+    "tifffile",
+    "matplotlib",
+    "aicspylibczi",
+    "pyometiff"
+]
+
+[project.scripts]
+align = "embryo_vnc_align:cli"

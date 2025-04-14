@@ -1,0 +1,13 @@
+name: align
+channels:
+  - conda-forge
+dependencies:
+  - click
+  - pynrrd>=1.1
+  - numpy
+  - scipy
+  - tifffile
+  - matplotlib
+  - pyqt
+  - pyometiff
+  #- aicspylibczi
