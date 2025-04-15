@@ -419,7 +419,7 @@ def compute_alignment_rotation(
     return Rotation.from_matrix(R_new.T)
 
 
-def rotate_image(lcc: LazyImageChannels):
+def rotate_image(lcc: LazyImageChannels, pixel_buffer_factor=1.0):
     # read the landmarks file
     src_landmarks = lcc.unique_path.with_suffix(".landmarks")
     lm_text = src_landmarks.read_text()
@@ -428,8 +428,8 @@ def rotate_image(lcc: LazyImageChannels):
         list_str = line.split()
         coords_dict[list_str[-1]] = np.array(list_str[:-1]).astype(float)
     # determine xformed cords by rotating then adding buffers
-    lower_range_divisor = np.array((0.4, 10, 10))
-    upper_range_divisor = np.array((2, 10, 10))
+    lower_range_divisor = np.array((0.4, 10, 10)) * pixel_buffer_factor
+    upper_range_divisor = np.array((2, 10, 10)) * pixel_buffer_factor
     top = np.array(coords_dict["anterior"])
     left = np.array(coords_dict["left"])
     right = np.array(coords_dict["right"])
@@ -526,6 +526,7 @@ def main(
     take_coords=True,
     proc_image=True,
     gamma=0.2,
+    pixel_buffer_factor=1.0,
 ):
     """
     opens the file in a viewer, prompts landmarks then writes those landmarks
@@ -563,16 +564,13 @@ def main(
         assert slicer is not None
         slicer.close()
         if proc_image:
-            rotate_image(lcc)
+            rotate_image(lcc, pixel_buffer_factor)
 
     app = QApplication([])
     slicer = ImageSlicer(
         image.squeeze(),
         app,
-        coords_generator(
-            callback,
-            lcc.scale
-        ),
+        coords_generator(callback, lcc.scale),
         gamma=gamma,
     )
     slicer.resize(800, 600)
@@ -610,13 +608,25 @@ def main(
     default=True,
     help="whether to processes the image, or else just run the GUI saving the coords.",
 )
+@click.option(
+    "-b",
+    "-pixel-buffer-factor",
+    type=float,
+    default=1,
+    help="""
+        Scales the buffer around the landmarks that are still included in in
+        the image. Larger numbers lead to larger images. Default is 1. Ignored
+        if --dont-proc-image
+    """,
+)
 def cli(
     file: str,
     scene: int,
     channel: int,
+    gamma: float,
     take_coords: bool,
     proc_image: bool,
-    gamma: float,
+    pixel_buffer_factor: float,
 ):
     """
     Rotate an embryo into the right orientation cropping to the limits of the
@@ -639,6 +649,7 @@ def cli(
         take_coords=take_coords,
         proc_image=proc_image,
         gamma=gamma,
+        pixel_buffer_factor=pixel_buffer_factor,
     )
 
 
