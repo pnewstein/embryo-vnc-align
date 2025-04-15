@@ -630,7 +630,7 @@ def cli(
     to the position of the points, and the image is saved as an ome.tif
 
     \b
-    embryo-vnc-align -s 0 -c 0 test.czi
+    align -s 0 -c 0 test.czi
     """
     main(
         Path(file),
