@@ -609,8 +609,8 @@ def main(
     help="whether to processes the image, or else just run the GUI saving the coords.",
 )
 @click.option(
-    "-b",
-    "-pixel-buffer-factor",
+    "-p",
+    "--pixel-buffer-factor",
     type=float,
     default=1,
     help="""
