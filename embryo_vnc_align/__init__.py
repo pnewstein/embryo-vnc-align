@@ -619,6 +619,12 @@ def main(
         if --dont-proc-image
     """,
 )
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="""Adds helpful messages. Use -vv for even more verbosity""",
+)
 def cli(
     file: str,
     scene: int,
@@ -627,6 +633,8 @@ def cli(
     take_coords: bool,
     proc_image: bool,
     pixel_buffer_factor: float,
+    verbose: int
+
 ):
     """
     Rotate an embryo into the right orientation cropping to the limits of the
@@ -642,6 +650,13 @@ def cli(
     \b
     align -s 0 -c 0 test.czi
     """
+    print(verbose)
+    if verbose == 1:
+        logging.basicConfig(level=logging.INFO)
+    elif verbose == 0:
+        logging.basicConfig(level=logging.WARNING)
+    elif verbose > 1:
+        logging.basicConfig(level=logging.DEBUG)
     main(
         Path(file),
         scene=scene,
