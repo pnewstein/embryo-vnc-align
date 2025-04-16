@@ -222,7 +222,7 @@ class LazyTiffChannels:
                 pixel_md["PhysicalSizeX"],
             ]
         ).astype(float)
-        self.channel_range = range(shape[0])
+        self.channel_range = range(shape[0]) if len(shape) == 4 else range(1)
         self._channel_dict: dict[int, np.ndarray | None] = {
             c: None for c in self.channel_range
         }
