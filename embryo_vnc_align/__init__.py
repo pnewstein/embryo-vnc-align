@@ -428,8 +428,8 @@ def rotate_image(lcc: LazyImageChannels, pixel_buffer_factor=1.0):
         list_str = line.split()
         coords_dict[list_str[-1]] = np.array(list_str[:-1]).astype(float)
     # determine xformed cords by rotating then adding buffers
-    lower_range_divisor = np.array((0.4, 10, 10)) * pixel_buffer_factor
-    upper_range_divisor = np.array((2, 10, 10)) * pixel_buffer_factor
+    lower_range_divisor = np.array((0.4, 7, 7)) * pixel_buffer_factor
+    upper_range_divisor = np.array((2, 7, 7)) * pixel_buffer_factor
     top = np.array(coords_dict["anterior"])
     left = np.array(coords_dict["left"])
     right = np.array(coords_dict["right"])
