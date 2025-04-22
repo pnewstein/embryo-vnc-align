@@ -552,7 +552,7 @@ def main(
     out_path = lcc.unique_path.with_suffix(".landmarks")
 
     if not take_coords:
-        rotate_image(lcc)
+        rotate_image(lcc, pixel_buffer_factor)
         return
 
     image = lcc.get_channel_data(channel)
