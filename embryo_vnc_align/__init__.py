@@ -539,9 +539,10 @@ def main(
     if (
         socket.gethostname() == "UO-2008493"
         and len(in_path.parts) > 2
-        and in_path.parts[2] == "DoeLab65TB"
+        and "DoeLab65TB" in in_path.parts
     ):
-        in_path = Path("/mnt/z") / in_path.relative_to(Path(*in_path.parts[:3]))
+        doe_lab_part_ind = in_path.parts.index("DoeLab65TB")
+        in_path = Path("/mnt/z") / in_path.relative_to(Path(*in_path.parts[:doe_lab_part_ind+1]))
     if in_path.suffix == ".czi":
         lcc = LazyCziChannels(in_path, other_image_specs)
     elif tuple(in_path.suffixes) in ((".ome", ".tiff"), (".ome", ".tiff)")):
@@ -650,7 +651,6 @@ def cli(
     \b
     align -s 0 -c 0 test.czi
     """
-    print(verbose)
     if verbose == 1:
         logging.basicConfig(level=logging.INFO)
     elif verbose == 0:
