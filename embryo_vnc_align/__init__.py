@@ -277,6 +277,8 @@ class LazyCziChannels:
             self.spacings_dict[next(iter(distance.items()))[-1]] = (
                 float(value.text) * 10e5
             )
+        if in_path == Path('/mnt/z/lab_member_data/Peter Newstein/elena/20240410-elav_bh1_affect_on_eve/elav_bh1ha-488ha647eve-s3r.czi'):
+            self.spacings_dict = {'X': 0.24, 'Y': 0.24, 'Z': 0.24}
         self.scale = np.array(
             [self.spacings_dict["Z"], self.spacings_dict["Y"], self.spacings_dict["X"]]
         )
@@ -428,8 +430,8 @@ def rotate_image(lcc: LazyImageChannels, pixel_buffer_factor=1.0):
         list_str = line.split()
         coords_dict[list_str[-1]] = np.array(list_str[:-1]).astype(float)
     # determine xformed cords by rotating then adding buffers
-    lower_range_divisor = np.array((0.4, 7, 7)) * pixel_buffer_factor
-    upper_range_divisor = np.array((2, 7, 7)) * pixel_buffer_factor
+    lower_range_divisor = np.array((0.4, 7, 7)) / pixel_buffer_factor
+    upper_range_divisor = np.array((2, 7, 7)) / pixel_buffer_factor
     top = np.array(coords_dict["anterior"])
     left = np.array(coords_dict["left"])
     right = np.array(coords_dict["right"])
