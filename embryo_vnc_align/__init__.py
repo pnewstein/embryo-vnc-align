@@ -9,6 +9,7 @@ import logging
 from dataclasses import dataclass
 import xml.etree.ElementTree as ET
 import socket
+import os
 
 from aicspylibczi import CziFile
 import nrrd
@@ -29,6 +30,11 @@ from matplotlib.backend_bases import MouseEvent
 from pyometiff import OMETIFFWriter
 import tifffile
 import click
+from qt_remote_commands_over_ssh_for_napari_plugins import (
+    Response,
+    from_string,
+    main_loop,
+)
 
 Coords: TypeAlias = tuple[float, float, float]
 
@@ -196,6 +202,28 @@ class LazyImageChannels(Protocol):
     def get_channel_metadata(self, chan: int) -> dict[str, str]: ...
 
 
+class NumpyChannel:
+    """
+    Wrapper around np.load. not lazy but fits lazy image channels
+    """
+
+    channel_range = range(1)
+
+    def __init__(self, in_path: Path, scale: np.ndarray, index: int):
+        self.in_path = in_path
+        self.unique_path = Path(f"{in_path.stem}-S{index}")
+        self.scale = scale
+        self.data: np.ndarray = np.load(in_path)
+
+    def get_channel_data(self, chan: int) -> np.ndarray:
+        _ = chan
+        return self.data
+
+    def get_channel_metadata(self, chan: int) -> dict[str, str]:
+        _ = chan
+        return {"Name": "NA", "Fluor": "NA"}
+
+
 class LazyTiffChannels:
     """
     Lazily read channels from a tiff file
@@ -203,6 +231,7 @@ class LazyTiffChannels:
     """
 
     def __init__(self, in_path: Path, scene=0):
+        image_specs = {"S": scene}
         self.in_path = in_path
         tif = tifffile.TiffFile(in_path)
         self.series = tif.series[scene]
@@ -226,7 +255,7 @@ class LazyTiffChannels:
         self._channel_dict: dict[int, np.ndarray | None] = {
             c: None for c in self.channel_range
         }
-        self.unique_path = Path(f"{in_path.stem}")
+        self.unique_path = Path(f"{in_path.stem}-{image_specs}")
         self.channel_xml_mdatata = pixels.findall("ome:Channel", namespaces=namespace)
         tot = len(self.series)
         n_slices = len(self.channel_range)
@@ -277,8 +306,10 @@ class LazyCziChannels:
             self.spacings_dict[next(iter(distance.items()))[-1]] = (
                 float(value.text) * 10e5
             )
-        if in_path == Path('/mnt/z/lab_member_data/Peter Newstein/elena/20240410-elav_bh1_affect_on_eve/elav_bh1ha-488ha647eve-s3r.czi'):
-            self.spacings_dict = {'X': 0.24, 'Y': 0.24, 'Z': 0.24}
+        if in_path == Path(
+            "/mnt/z/lab_member_data/Peter Newstein/elena/20240410-elav_bh1_affect_on_eve/elav_bh1ha-488ha647eve-s3r.czi"
+        ):
+            self.spacings_dict = {"X": 0.24, "Y": 0.24, "Z": 0.24}
         self.scale = np.array(
             [self.spacings_dict["Z"], self.spacings_dict["Y"], self.spacings_dict["X"]]
         )
@@ -421,7 +452,7 @@ def compute_alignment_rotation(
     return Rotation.from_matrix(R_new.T)
 
 
-def rotate_image(lcc: LazyImageChannels, pixel_buffer_factor=1.0):
+def rotate_image(lcc: LazyImageChannels, lateral_buffer_factor=1.0, height=40.0):
     # read the landmarks file
     src_landmarks = lcc.unique_path.with_suffix(".landmarks")
     lm_text = src_landmarks.read_text()
@@ -430,8 +461,7 @@ def rotate_image(lcc: LazyImageChannels, pixel_buffer_factor=1.0):
         list_str = line.split()
         coords_dict[list_str[-1]] = np.array(list_str[:-1]).astype(float)
     # determine xformed cords by rotating then adding buffers
-    lower_range_divisor = np.array((0.4, 7, 7)) / pixel_buffer_factor
-    upper_range_divisor = np.array((2, 7, 7)) / pixel_buffer_factor
+    range_divisor = 7 / lateral_buffer_factor
     top = np.array(coords_dict["anterior"])
     left = np.array(coords_dict["left"])
     right = np.array(coords_dict["right"])
@@ -445,10 +475,15 @@ def rotate_image(lcc: LazyImageChannels, pixel_buffer_factor=1.0):
     rc_max = rotated_coords.max(axis=0)
     rc_range = rc_max - rc_min
     assert min(rc_range) > 0, "bad coordiate system"
-    offset = rc_min - (rc_range / lower_range_divisor)
-    npix = (
-        rc_range + (rc_range / upper_range_divisor) + (rc_range / lower_range_divisor)
-    ) / out_scale
+    offset = rc_min - (rc_range / range_divisor)
+    # make height independant
+    offset[0] = rotated_coords[:, 0].mean() - (height / 2)
+    size_um = (
+        rc_range + (rc_range / range_divisor) + (rc_range / range_divisor)
+    ) 
+    size_um[0] = height
+    npix = size_um / out_scale
+    # bake the offset into the coords to simplify the --target-grid argument
     xformed_coords = rotated_coords - offset
     out_coords = CoordsSet.from_um_coords(xformed_coords, out_scale)
     target_landmarks.write_text(out_coords.to_cmtk())
@@ -544,7 +579,9 @@ def main(
         and "DoeLab65TB" in in_path.parts
     ):
         doe_lab_part_ind = in_path.parts.index("DoeLab65TB")
-        in_path = Path("/mnt/z") / in_path.relative_to(Path(*in_path.parts[:doe_lab_part_ind+1]))
+        in_path = Path("/mnt/z") / in_path.relative_to(
+            Path(*in_path.parts[: doe_lab_part_ind + 1])
+        )
     if in_path.suffix == ".czi":
         lcc = LazyCziChannels(in_path, other_image_specs)
     elif tuple(in_path.suffixes) in ((".ome", ".tiff"), (".ome", ".tiff)")):
@@ -636,8 +673,7 @@ def cli(
     take_coords: bool,
     proc_image: bool,
     pixel_buffer_factor: float,
-    verbose: int
-
+    verbose: int,
 ):
     """
     Rotate an embryo into the right orientation cropping to the limits of the
@@ -670,4 +706,55 @@ def cli(
     )
 
 
-cli()
+@dataclass(frozen=True)
+class RotationIdentificationRequest:
+    coords: list[list[float]]
+    scale: list[float]
+    index: int
+    input_path: str
+    pixel_buffer_factor: float
+    height: float
+
+
+@dataclass(frozen=True)
+class ApplyRotationRequest:
+    input_path: str
+    index: int
+    pixel_buffer_factor: float
+    height: float
+
+
+def reomote_process_image(input_str: str, directory: Path) -> Response:
+    logger.debug(input_str)
+    try:
+        request: RotationIdentificationRequest | ApplyRotationRequest = from_string(
+            RotationIdentificationRequest, input_str
+        )
+    except TypeError:
+        request = from_string(ApplyRotationRequest, input_str)
+    in_path = directory / request.input_path
+    os.chdir(in_path.parent)
+    if isinstance(request, RotationIdentificationRequest):
+        lcc = NumpyChannel(
+            in_path,
+            scale=np.array(request.scale),
+            index=request.index,
+        )
+        cs = CoordsSet(request.coords[0], request.coords[1], request.coords[2], request.coords[3], request.scale)  # type: ignore
+        target_landmarks = lcc.unique_path.with_suffix(".landmarks")
+        target_landmarks.write_text(cs.to_cmtk())
+        rotate_image(lcc, request.pixel_buffer_factor, request.height)
+    else:
+        if in_path.suffix == ".czi":
+            lcc = LazyCziChannels(in_path, {"S": request.index})
+        elif tuple(in_path.suffixes) in ((".ome", ".tiff"), (".ome", ".tiff)")):
+            lcc = LazyTiffChannels(in_path, 0)
+            lcc.unique_path = Path(in_path).with_suffix("").with_suffix("")
+        else:
+            raise NotImplementedError("Only .ome.tif and czi are supported")
+        rotate_image(lcc, request.pixel_buffer_factor, request.height)
+    return Response(str(lcc.unique_path.with_suffix(".ome.tiff")), "")
+
+
+def remote_align():
+    main_loop(reomote_process_image)

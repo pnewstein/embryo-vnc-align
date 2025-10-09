@@ -8,6 +8,7 @@ dependencies = [
     "pynrrd>=1.1",
     "numpy",
     "scipy",
+    "qt-remote-commands-over-ssh-for-napari-plugins",
     #"PyQt5",
     "tifffile",
     "matplotlib",
@@ -17,3 +18,4 @@ dependencies = [
 
 [project.scripts]
 align = "embryo_vnc_align:cli"
+remote-align = "embryo_vnc_align:remote_align"
