@@ -36,6 +36,13 @@ from qt_remote_commands_over_ssh_for_napari_plugins import (
     main_loop,
 )
 
+logging.basicConfig(
+    filename="embryo-vnc-align.log",
+    filemode="a",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
 Coords: TypeAlias = tuple[float, float, float]
 
 logger = logging.getLogger(__name__)
