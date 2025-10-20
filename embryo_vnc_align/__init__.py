@@ -740,7 +740,8 @@ def reomote_process_image(input_str: str, directory: Path) -> Response:
     except TypeError:
         request = from_string(ApplyRotationRequest, input_str)
     in_path = directory / request.input_path
-    os.chdir(in_path.parent)
+    os.chdir(directory)
+    logging.debug(f"I'm in {directory}")
     if isinstance(request, RotationIdentificationRequest):
         lcc = NumpyChannel(
             in_path,
