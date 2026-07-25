@@ -15,7 +15,7 @@ from aicspylibczi import CziFile
 import nrrd
 import numpy as np
 from scipy.spatial.transform import Rotation
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QMainWindow,
     QSlider,
     QVBoxLayout,
@@ -23,7 +23,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
 )
-from PyQt5.QtCore import Qt
+from PyQt6.QtCore import Qt
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backend_bases import MouseEvent

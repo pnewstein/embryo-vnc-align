@@ -8,6 +8,6 @@ dependencies:
   - scipy
   - tifffile
   - matplotlib
-  - pyqt
+  - pyqt6
   - pyometiff
   #- aicspylibczi
