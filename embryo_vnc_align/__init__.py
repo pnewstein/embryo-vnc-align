@@ -191,7 +191,11 @@ def coords_generator(callback: CoordsCallback, scale: np.ndarray):
     logger.info(",".join(str(c) for c in posterior))
     callback(
         CoordsSet(
-            posterior=posterior, left=left, right=right, anterior=anterior, scale=scale
+            posterior=posterior,
+            left=left,
+            right=right,
+            anterior=anterior,
+            scale=scale,
         )
     )
 
@@ -318,7 +322,11 @@ class LazyCziChannels:
         ):
             self.spacings_dict = {"X": 0.24, "Y": 0.24, "Z": 0.24}
         self.scale = np.array(
-            [self.spacings_dict["Z"], self.spacings_dict["Y"], self.spacings_dict["X"]]
+            [
+                self.spacings_dict["Z"],
+                self.spacings_dict["Y"],
+                self.spacings_dict["X"],
+            ]
         )
         assert self.czi.shape_is_consistent
         (dimensions,) = self.czi.get_dims_shape()
@@ -485,9 +493,7 @@ def rotate_image(lcc: LazyImageChannels, lateral_buffer_factor=1.0, height=40.0)
     offset = rc_min - (rc_range / range_divisor)
     # make height independant
     offset[0] = rotated_coords[:, 0].mean() - (height / 2)
-    size_um = (
-        rc_range + (rc_range / range_divisor) + (rc_range / range_divisor)
-    ) 
+    size_um = rc_range + (rc_range / range_divisor) + (rc_range / range_divisor)
     size_um[0] = height
     npix = size_um / out_scale
     # bake the offset into the coords to simplify the --target-grid argument
@@ -755,9 +761,14 @@ def reomote_process_image(input_str: str, directory: Path) -> Response:
     else:
         if in_path.suffix == ".czi":
             lcc = LazyCziChannels(in_path, {"S": request.index})
-        elif tuple(in_path.suffixes) in ((".ome", ".tiff"), (".ome", ".tiff)")):
+        elif tuple(in_path.suffixes) in (
+            (".ome", ".tiff"),
+            (".ome", ".tiff)"),
+        ):
             lcc = LazyTiffChannels(in_path, 0)
-            lcc.unique_path = Path(in_path).with_suffix("").with_suffix("")
+            lcc.unique_path = (
+                Path(in_path).with_suffix("").with_suffix("").relative_to(directory)
+            )
         else:
             raise NotImplementedError("Only .ome.tif and czi are supported")
         rotate_image(lcc, request.pixel_buffer_factor, request.height)
