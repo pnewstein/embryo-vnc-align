@@ -10,4 +10,4 @@ dependencies:
   - matplotlib
   - pyqt6
   - pyometiff
-  #- aicspylibczi
+  - aicspylibczi
